@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: django-config
+data:
+  DJANGO_SECRET_KEY: "your-secret-key"
+  DJANGO_DEBUG: "False"
+  DJANGO_ALLOWED_HOSTS: "your-domain.com"
+  DATABASE_URL: "postgres://user:password@postgres-service:5432/dbname"
+  REDIS_URL: "redis://redis-service:6379/0"
