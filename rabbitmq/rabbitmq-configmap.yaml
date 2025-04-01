@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rabbitmq-config
+data:
+  rabbitmq.conf: |
+    listeners.tcp.default = 5672
+    management.listener.port = 15672
