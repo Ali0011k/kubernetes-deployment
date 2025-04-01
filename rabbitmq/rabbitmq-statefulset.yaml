@@ -18,12 +18,39 @@ spec:
           image: rabbitmq:management
           env:
             - name: RABBITMQ_ERLANG_COOKIE
-              value: "secretcookie"
+              valueFrom:
+                configMapKeyRef:
+                  name: rabbitmq-config
+                  key: RABBITMQ_ERLANG_COOKIE
+            - name: RABBITMQ_DEFAULT_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: rabbitmq-config
+                  key: RABBITMQ_DEFAULT_USER
+            - name: RABBITMQ_DEFAULT_PASS
+              valueFrom:
+                configMapKeyRef:
+                  name: rabbitmq-config
+                  key: RABBITMQ_DEFAULT_PASS
           volumeMounts:
             - name: rabbitmq-config
               mountPath: /etc/rabbitmq
             - name: rabbitmq-data
               mountPath: /var/lib/rabbitmq
+          readinessProbe:
+            httpGet:
+              path: /api/healthchecks/node
+              port: 15672
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /api/healthchecks/node
+              port: 15672
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            failureThreshold: 3
   volumeClaimTemplates:
     - metadata:
         name: rabbitmq-data
