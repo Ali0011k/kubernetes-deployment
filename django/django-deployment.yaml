@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: django
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: django
+  template:
+    metadata:
+      labels:
+        app: django
+    spec:
+      containers:
+        - name: django
+          image: your-django-image
+          envFrom:
+            - configMapRef:
+                name: django-config
+          volumeMounts:
+            - name: django-static
+              mountPath: /static
+            - name: django-media
+              mountPath: /media
+          ports:
+            - containerPort: 8000
+          readinessProbe:
+            httpGet:
+              path: /health/
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /health/
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 15
+            failureThreshold: 3
+      volumes:
+        - name: django-static
+          persistentVolumeClaim:
+            claimName: django-pvc
+        - name: django-media
+          persistentVolumeClaim:
+            claimName: django-pvc
