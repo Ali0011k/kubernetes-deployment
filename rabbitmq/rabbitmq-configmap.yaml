@@ -3,6 +3,6 @@ kind: ConfigMap
 metadata:
   name: rabbitmq-config
 data:
-  rabbitmq.conf: |
-    listeners.tcp.default = 5672
-    management.listener.port = 15672
+  RABBITMQ_DEFAULT_USER: "your-username"
+  RABBITMQ_DEFAULT_PASS: "your-password"
+  RABBITMQ_ERLANG_COOKIE: "secretcookie"
