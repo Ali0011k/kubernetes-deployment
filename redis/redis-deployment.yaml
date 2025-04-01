@@ -12,30 +12,43 @@ spec:
       labels:
         app: redis
     spec:
-      restartPolicy: Always
       containers:
       - name: redis
         image: redis:latest
-        ports:
-        - containerPort: 6379
+        command: ["redis-server", "/etc/redis/redis.conf"]
         volumeMounts:
+        - name: redis-config
+          mountPath: /etc/redis
         - name: redis-data
           mountPath: /data
+        ports:
+        - containerPort: 6379
         livenessProbe:
-          tcpSocket:
-            port: 6379
+          exec:
+            command:
+              - redis-cli
+              - -h
+              - localhost
+              - ping
           initialDelaySeconds: 10
           periodSeconds: 10
           timeoutSeconds: 5
           failureThreshold: 3
         readinessProbe:
-          tcpSocket:
-            port: 6379
+          exec:
+            command:
+              - redis-cli
+              - -h
+              - localhost
+              - ping
           initialDelaySeconds: 5
-          periodSeconds: 10
+          periodSeconds: 5
           timeoutSeconds: 5
           failureThreshold: 3
-      volumes:
-      - name: redis-data
-        persistentVolumeClaim:
-          claimName: redis-pvc
+  volumes:
+  - name: redis-config
+    configMap:
+      name: redis-config
+  - name: redis-data
+    persistentVolumeClaim:
+      claimName: redis-data-pvc
