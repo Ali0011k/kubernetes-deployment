@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nextjs
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nextjs
+  template:
+    metadata:
+      labels:
+        app: nextjs
+    spec:
+      containers:
+        - name: nextjs
+          image: your-nextjs-image
+          ports:
+            - containerPort: 3000
+          envFrom:
+            - configMapRef:
+                name: nextjs-config
+          readinessProbe:
+            httpGet:
+              path: /_next/health
+              port: 3000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /_next/health
+              port: 3000
+            initialDelaySeconds: 15
+            periodSeconds: 15
+            failureThreshold: 3
