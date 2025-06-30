@@ -3,7 +3,12 @@ kind: Deployment
 metadata:
   name: django
 spec:
-  replicas: 2
+  replicas: 4
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
   selector:
     matchLabels:
       app: django
@@ -12,37 +17,69 @@ spec:
       labels:
         app: django
     spec:
+      imagePullSecrets:
+        - name: regcred
       containers:
-        - name: django
-          image: your-django-image
-          envFrom:
-            - configMapRef:
-                name: django-config
-          volumeMounts:
-            - name: django-static
-              mountPath: /static
-            - name: django-media
-              mountPath: /media
-          ports:
-            - containerPort: 8000
-          readinessProbe:
-            httpGet:
-              path: /health/
-              port: 8000
-            initialDelaySeconds: 5
-            periodSeconds: 5
-            failureThreshold: 3
-          livenessProbe:
-            httpGet:
-              path: /health/
-              port: 8000
-            initialDelaySeconds: 15
-            periodSeconds: 15
-            failureThreshold: 3
-      volumes:
-        - name: django-static
-          persistentVolumeClaim:
-            claimName: django-pvc
-        - name: django-media
-          persistentVolumeClaim:
-            claimName: django-pvc
+      - name: django
+        image: ali00011k/chat-app:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8000
+#        command: ["/bin/bash", "-c"]
+#        args: ["/code/run-web.sh"]
+        command: ["daphne"]
+        args: ["-b", "0.0.0.0", "-p", "8000", "core.asgi:application"]
+
+        env:
+        - name: DB_USER
+          value: postgres
+        - name: DB_PASS
+          value: a@123456
+        - name: DB_PORT
+          value: "5432"
+        - name: DB_NAME
+          value: postgres
+        - name: DB_HOST
+          value: postgres
+        - name: SECRET_KEY
+          value: django-insecure-#6mib9iuiup7^1j&y)8#tc8o&%9ux=a8%24s%(x2a9917$0dw%
+        - name: DEBUG
+          value: "True"
+        - name: ALLOWED_HOSTS
+          value: "*"
+        - name: REDIS_URL
+          value: redis://:a@123456@redis:6379
+        - name: REDIS_DB
+          value: "0"
+        - name: ACCESS_TOKEN_LIFETIME
+          value: "15"
+        - name: REFRESH_TOKEN_LIFETIME
+          value: "7"
+        - name: KAVENEGAR_API_KEY
+          value: test
+        - name: TEST_USER_PASSWORD
+          value: a@123456
+        - name: DJANGO_SUPERUSER_PASSWORD
+          value: a@123456
+
+        resources:
+          requests:
+            cpu: "300m"
+            memory: "512Mi"
+          limits:
+            cpu: "500m"
+            memory: "1024Mi"
+
+        readinessProbe:
+          httpGet:
+            path: /admin/
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 10
+
+        livenessProbe:
+          httpGet:
+            path: /admin/
+            port: 8000
+          initialDelaySeconds: 15
+          periodSeconds: 20
