@@ -3,8 +3,8 @@ kind: StatefulSet
 metadata:
   name: postgres
 spec:
-  serviceName: postgres
-  replicas: 2
+  serviceName: "postgres"
+  replicas: 1
   selector:
     matchLabels:
       app: postgres
@@ -14,22 +14,56 @@ spec:
         app: postgres
     spec:
       containers:
-        - name: postgres
-          image: postgres:latest
-          envFrom:
-            - configMapRef:
-                name: postgres-config
-          ports:
-            - containerPort: 5432
-          volumeMounts:
-            - name: postgres-data
-              mountPath: /var/lib/postgresql/data
+      - name: postgres
+        image: postgres:16
+        ports:
+        - containerPort: 5432
+          name: postgres
+        env:
+        - name: POSTGRES_DB
+          value: postgres
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secret
+              key: username
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secret
+              key: password
+
+        volumeMounts:
+        - name: postgres-storage
+          mountPath: /var/lib/postgresql/data
+
+        readinessProbe:
+          exec:
+            command:
+              - pg_isready
+              - -U
+              - "$(POSTGRES_USER)"
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+          successThreshold: 1
+
+        livenessProbe:
+          exec:
+            command:
+              - pg_isready
+              - -U
+              - "$(POSTGRES_USER)"
+          initialDelaySeconds: 15
+          periodSeconds: 20
+          failureThreshold: 5
+
   volumeClaimTemplates:
-    - metadata:
-        name: postgres-data
-      spec:
-        accessModes:
-          - ReadWriteOnce
-        resources:
-          requests:
-            storage: 10Gi
+  - metadata:
+      name: postgres-storage
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      resources:
+        requests:
+          storage: 5Gi
