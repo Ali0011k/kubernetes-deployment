@@ -1,84 +1,81 @@
-# Kubernetes Deployment for Microservices
+# **Kubernetes Deployment for Microservices with k3s**
 
-This repository contains Kubernetes configuration files for deploying various services such as Redis, PostgreSQL, RabbitMQ, Django, Next.js, and Nginx. This documentation will guide you through setting up the server, installing Kubernetes, and configuring services. For each service, a detailed configuration guide is available in the corresponding folder.
+This repository contains Kubernetes configuration files for deploying various services such as **Redis**, **PostgreSQL**, **RabbitMQ**, **Django**, **Next.js**, and **Nginx**. This documentation will guide you through setting up your server, installing **k3s**, and configuring your services. For each service, a detailed configuration guide is available in its corresponding folder.
 
-## 1. Server Setup and Prerequisites
+## **1\. Server Setup and Prerequisites**
 
-Before deploying Kubernetes and its services, you need to configure your server. Follow these steps to configure your server for Kubernetes.
+Before deploying k3s and its services, you need to configure your server. Follow these steps:
 
-### Disable Swap
-Swap should be disabled to allow Kubernetes to work properly:
+### **Disable Swap**
+
+Swap should be disabled for Kubernetes to function correctly:
 ```bash
-sudo swapoff -a
-sudo sed -i '/ swap / s/^/#/' /etc/fstab
+sudo swapoff -a  
+sudo sed -i '/ swap / s/^/\#/' /etc/fstab
 ```
-### Configure Kernel Settings for Kubernetes
-Run the following commands to configure the necessary kernel modules and sysctl settings for Kubernetes:
-```bash
-cat <<EOF | sudo tee /etc/modules-load.d/k8s.conf
-overlay
-br_netfilter
-EOF
 
-sudo modprobe overlay
-sudo modprobe br_netfilter
+## **2\. Install k3s and Set Up Cluster**
 
-cat <<EOF | sudo tee /etc/sysctl.d/k8s.conf
-net.bridge.bridge-nf-call-iptables  = 1
-net.bridge.bridge-nf-call-ip6tables = 1
-net.ipv4.ip_forward                 = 1
-EOF
+**k3s** is a lightweight, easy-to-install Kubernetes distribution. It includes most necessary components, like a CNI (Container Network Interface) plugin, pre-configured.
 
-sudo sysctl --system
-```
-## 2. Install Docker and Kubernetes Dependencies
-Install Docker, which is required for running containers in Kubernetes, and the necessary Kubernetes packages:
-```bash
-sudo apt update && sudo apt install -y docker.io
-sudo systemctl enable --now docker
+### **Initialize k3s Master Node**
 
-curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
-echo "deb http://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list
+To install k3s and initialize your master node, run this command. It will download and install k3s, set up the required services, and configure kubectl for you.
+```bash
+curl -sfL https://get.k3s.io | sh -
+```
+After installation, verify it and access your cluster:
 
-sudo apt update && sudo apt install -y kubelet kubeadm kubectl
-sudo systemctl enable --now kubelet
-```
-## 3. Set Up Kubernetes Cluster
-### Initialize Master Node
-Run the following command to initialize the Kubernetes master node:
 ```bash
-sudo kubeadm init --pod-network-cidr=10.244.0.0/16
+sudo kubectl get nodes
 ```
-After the initialization is complete, configure `kubectl` to access the cluster:
+You might need to wait a moment for the node to show as Ready.
+
+### **Join Worker Nodes (Optional)**
+
+To add worker nodes to your k3s cluster, you'll need the **Node Token** from your master node. Get the token by running this command on your master:
 ```bash
-mkdir -p $HOME/.kube
-sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
-sudo chown $(id -u):$(id -g) $HOME/.kube/config
+sudo cat /var/lib/rancher/k3s/server/node-token
 ```
-### Join Worker Nodes
-To join worker nodes to the cluster, run the following command on each worker node (replace `<TOKEN>` and `<HASH>` with the appropriate values from the master node output):
+On each worker node you want to join, run the following command, replacing \<MASTER\_IP\> with your k3s master node's IP address and \<NODE\_TOKEN\> with the token you obtained:
 ```bash
-sudo kubeadm join <MASTER_IP>:6443 --token <TOKEN> --discovery-token-ca-cert-hash sha256:<HASH>
+curl -sfL https://get.k3s.io | K3S_URL=https://<MASTER_IP>:6443 K3S_TOKEN=<NODE_TOKEN> sh -
 ```
-## 4. Install CNI (Network Plugin) for Kubernetes
-Now, install a CNI plugin to allow communication between pods. In this setup, we use Flannel as the CNI network plugin:
+## **3\. Install Metrics Server**
+
+**Metrics Server** is a scalable, efficient source of container resource metrics for Kubernetes' built-in autoscaling pipelines.
+
+To install Metrics Server, run this command:
 ```bash
-kubectl apply -f https://raw.githubusercontent.com/flannel-io/flannel/master/Documentation/kube-flannel.yml
+kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
 ```
-## 5. Verify Cluster and Node Status
-Check the status of the nodes and pods:
+You can verify that Metrics Server is running by checking the pods in the kube-system namespace. It might take a few moments for the pods to become Running.
 ```bash
-kubectl get nodes
+kubectl get pods -n kube-system | grep metrics-server
+```
+Once installed, you can use kubectl top commands to view resource usage:
+```bash
+kubectl top nodes  
+kubectl top pods --all-namespaces
+```
+## **4\. Verify Cluster and Node Status**
+
+Check the status of your nodes and pods to ensure everything is running as expected:
+```bash
+kubectl get nodes  
 kubectl get pods --all-namespaces
 ```
-Ensure all nodes show a status of `Ready`.
-## 6. Link to Service-Specific Documentation
-Now that the Kubernetes cluster is set up, you can follow the links to the specific services you want to deploy.
-- [Redis Configuration and Deployment](./redis/README.md)
-- [PostgreSQL Configuration and Deployment](./postgresql/README.md)
-- [RabbitMQ Configuration and Deployment](./rabbitmq/README.md)
-- [Django Application Configuration and Deployment](./django/README.md)
-- [Next.js Application Configuration and Deployment](./nextjs/README.md)
-- [Nginx Load Balancer Configuration](./nginx/README.md)
+Make sure all nodes show a status of Ready.
 
-Make sure to follow each service's detailed guide to configure and deploy the respective service within the Kubernetes cluster.
+## **5\. Link to Service-Specific Documentation**
+
+Now that your k3s cluster is set up and Metrics Server is installed, you can proceed with deploying your services. Follow the links below to the specific services you want to deploy:
+
+* [Redis Configuration and Deployment](./redis/README.md)  
+* [PostgreSQL Configuration and Deployment](./postgresql/README.md)  
+* [RabbitMQ Configuration and Deployment](./rabbitmq/README.md)  
+* [Django Application Configuration and Deployment](./django/README.md)  
+* [Next.js Application Configuration and Deployment](./nextjs/README.md)  
+* [Nginx Load Balancer Configuration](./nginx/README.md)
+
+Be sure to follow each service's detailed guide to configure and deploy it within your Kubernetes cluster.
