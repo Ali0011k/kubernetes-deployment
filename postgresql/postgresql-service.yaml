@@ -1,11 +1,11 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: postgresql
-  namespace: default
+  name: postgres
 spec:
+  type: ClusterIP
+  selector:
+    app: postgres
   ports:
     - port: 5432
       targetPort: 5432
-  selector:
-    app: postgresql
